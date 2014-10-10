@@ -3,79 +3,71 @@
 ## BACKUP
 #####################
 inspectPartition() {
-cat <<-EOF
-if "!backup_taPartitionName!" == "-1" goto:eof
-	echo --- %1 ---
-	set /p "=Searching for Operator Identifier..." < nul
-	tools\adb.exe shell su -c "%BB% cat /dev/block/%1 | %BB% grep -s -m 1 -c 'OP_ID='">tmpbak\backup_matchOP_ID
-	set /p backup_matchOP_ID=<tmpbak\backup_matchOP_ID
-	if "!backup_matchOP_ID!" == "1" (
-		echo +
-	) else (
-		echo -
-	)
-	set /p "=Searching for Operator Name..." < nul
-	tools\adb.exe shell su -c "%BB% cat /dev/block/%1 | %BB% grep -s -m 1 -c 'OP_NAME='">tmpbak\backup_matchOP_Name
-	set /p backup_matchOP_Name=<tmpbak\backup_matchOP_Name
-	if "!backup_matchOP_Name!" == "1" (
-		echo +
-	) else (
-		echo -
-	)
-	set /p "=Searching for Rooting Status..." < nul
-	tools\adb.exe shell su -c "%BB% cat /dev/block/%1 | %BB% grep -s -m 1 -c 'ROOTING_ALLOWED='">tmpbak\backup_matchRootingStatus
-	set /p backup_matchRootingStatus=<tmpbak\backup_matchRootingStatus
-	if "!backup_matchRootingStatus!" == "1" (
-		echo +
-	) else (
-		echo -
-	)
-	set /p "=Searching for S1 Boot..." < nul
-	tools\adb.exe shell su -c "%BB% cat /dev/block/%1 | %BB% grep -s -m 1 -c -i 'S1_Boot'">tmpbak\backup_matchS1_Boot
-	set /p backup_matchS1_Boot=<tmpbak\backup_matchS1_Boot
-	if "!backup_matchS1_Boot!" == "1" (
-		echo +
-	) else (
-		echo -
-	)
-	set /p "=Searching for S1 Loader..." < nul
-	tools\adb.exe shell su -c "%BB% cat /dev/block/%1 | %BB% grep -s -m 1 -c -i 'S1_Loader'">tmpbak\backup_matchS1_Loader
-	set /p backup_matchS1_Loader=<tmpbak\backup_matchS1_Loader
-	if "!backup_matchS1_Loader!" == "1" (
-		echo +
-	) else (
-		echo -
-	)
-	set /p "=Searching for S1 Hardware Configuration..." < nul
-	tools\adb.exe shell su -c "%BB% cat /dev/block/%1 | %BB% grep -s -m 1 -c -i 'S1_HWConf'">tmpbak\backup_matchS1_HWConf
-	set /p backup_matchS1_HWConf=<tmpbak\backup_matchS1_HWConf
-	if "!backup_matchS1_HWConf!" == "1" (
-		echo +
-	) else (
-		echo -
-	)
+	if [[ $backup_taPartitionName == "-1" ]] ; then
+		return
+	fi
+	echo "--- $1 ---"
+	echo "Searching for Operator Identifier..."
+	backup_matchOP_ID=$( $ADB shell su -c "$BB cat /dev/block/$1 | $BB grep -s -m 1 -c 'OP_ID='" | _dos2unix )
+	if [[ $backup_matchOP_ID == "1" ]]; then
+		echo "+"
+	else
+		echo "-" ;
+	fi
+	echo "Searching for Operator Name..."
+	backup_matchOP_Name=$( $ADB shell su -c "$BB cat /dev/block/$1 | $BB grep -s -m 1 -c 'OP_NAME='" | _dos2unix )
+	if [[ "$backup_matchOP_Name" == "1" ]]; then
+		echo "+"
+	else
+		echo "-"
+	fi
+	echo "Searching for Rooting Status..."
+	backup_matchRootingStatus=$( $ADB shell su -c "$BB cat /dev/block/$1 | $BB grep -s -m 1 -c 'ROOTING_ALLOWED='" | _dos2unix )
+	if [[ "$backup_matchRootingStatus" == "1" ]]; then
+		echo "+"
+	else
+		echo "-"
+	fi
+	echo "Searching for S1 Boot..."
+	backup_matchS1_Boot=$( $ADB shell su -c "$BB cat /dev/block/$1 | $BB grep -s -m 1 -c -i 'S1_Boot'" | _dos2unix )
+	if [[ "$backup_matchS1_Boot" == "1" ]]; then
+		echo "+"
+	else
+		echo "-"
+	fi
+	echo "Searching for S1 Loader..."
+	backup_matchS1_Loader=$( $ADB shell su -c "$BB cat /dev/block/$1 | $BB grep -s -m 1 -c -i 'S1_Loader'" | _dos2unix )
+	if [[ "$backup_matchS1_Loader" == "1" ]]; then
+		echo "+"
+	else
+		echo "-"
+	fi
+	echo "Searching for S1 Hardware Configuration..."
+	backup_matchS1_HWConf=$( $ADB shell su -c "$BB cat /dev/block/$1 | $BB grep -s -m 1 -c -i 'S1_HWConf'" | _dos2unix )
+	if [[ "$backup_matchS1_HWConf" == "1" ]]; then
+		echo "+"
+	else
+		echo "-"
+	fi
 
-	if "!backup_matchOP_ID!" == "1" (
-		if "!backup_matchOP_Name!" == "1" (
-			if "!backup_matchRootingStatus!" == "1" (
-				if "!backup_matchS1_Boot!" == "1" (
-					if "!backup_matchS1_Loader!" == "1" (
-						if "!backup_matchS1_HWConf!" == "1" (
-							if "!backup_taPartitionName!" == "" (
-								set backup_taPartitionName=%1
-							) else (
-								set backup_taPartitionName=-1
-							)
-						)
-					)
-				)
-			)
-		)
-	)
-	echo.
-	goto:eof
-)
-EOF
+	if [[ "$backup_matchOP_ID" == "1" ]]; then
+		if [[ "$backup_matchOP_Name" == "1" ]]; then
+			if [[ "$backup_matchRootingStatus" == "1" ]]; then
+				if [[ "$backup_matchS1_Boot" == "1" ]]; then
+					if [[ "$backup_matchS1_Loader" == "1" ]]; then
+						if [[ "$backup_matchS1_HWConf" == "1" ]]; then
+							if [[ "$backup_taPartitionName" == "" ]]; then
+								backup_taPartitionName=$1
+							else
+								backup_taPartitionName=-1
+							fi
+						fi
+					fi
+				fi
+			fi
+		fi
+	fi
+	echo
 }
 
 backupTA() {
@@ -104,16 +96,15 @@ backupTA() {
 				*) continue ;;
 			esac
 		done
-		# FIXME: Branch not yet tested
+
 		echo
 		echo =======================================
 		echo  INSPECTING PARTITIONS
 		echo =======================================
 		backup_taPartitionName=
-		backup_potentialPartitions=$( $ADB shell su -c "$BB cat /proc/partitions | $BB awk '{if (\$3<=9999 && match (\\\$4, \"'\"mmcblk\"'\")) print \\\$4}'" )
+		backup_potentialPartitions=$( $ADB shell su -c "$BB cat /proc/partitions | $BB awk '{if (\\\$3<=9999 && match (\\\$4, \"'\"mmcblk\"'\")) print \\\$4}'" | _dos2unix )
 		for partition in $backup_potentialPartitions ; do
-			#for /F "tokens=*" %%A in (tmpbak\backup_potentialPartitions) do call:inspectPartition %%A
-			echo $partition
+			inspectPartition $partition
 		done
 		
 		if [[ "$backup_taPartitionName" != "" ]]; then
