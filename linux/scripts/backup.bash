@@ -88,7 +88,7 @@ backupTA() {
 	echo =======================================
 	echo  FIND TA PARTITION
 	echo =======================================
-	backup_defaultTA=$( $ADB shell su -c "$BB ls -l $PARTITION_BY_NAME | $BB awk '{print \$11}'" | _dos2unix )
+	backup_defaultTA=$( $ADB shell su -c "$BB ls -l $PARTITION_BY_NAME | $BB awk '{print \\\$11}'" | _dos2unix )
 	backup_defaultTAvalid=$( $ADB shell su -c "if [ -b '$backup_defaultTA' ]; then echo '1'; else echo '0'; fi" | _dos2unix )
 	if [[ "$backup_defaultTAvalid" == "1" ]]; then
 		partition=$backup_defaultTA
@@ -104,13 +104,13 @@ backupTA() {
 				*) continue ;;
 			esac
 		done
-		
+		# FIXME: Branch not yet tested
 		echo
 		echo =======================================
 		echo  INSPECTING PARTITIONS
 		echo =======================================
 		backup_taPartitionName=
-		backup_potentialPartitions=$( $ADB shell su -c "$BB cat /proc/partitions | $BB awk '{if (\$3<=9999 && match (\$4, \"'\"mmcblk\"'\")) print \$4}'" )
+		backup_potentialPartitions=$( $ADB shell su -c "$BB cat /proc/partitions | $BB awk '{if (\$3<=9999 && match (\\\$4, \"'\"mmcblk\"'\")) print \\\$4}'" )
 		for partition in $backup_potentialPartitions ; do
 			#for /F "tokens=*" %%A in (tmpbak\backup_potentialPartitions) do call:inspectPartition %%A
 			echo $partition
@@ -139,15 +139,15 @@ backupTA() {
 	echo =======================================
 	echo  BACKUP TA PARTITION
 	echo =======================================
-	backup_currentPartitionMD5=$( $ADB shell su -c "$BB md5sum $partition | $BB awk {'print \$1'}")
+	backup_currentPartitionMD5=$( $ADB shell su -c "$BB md5sum $partition | $BB awk {'print \\\$1'}" | _dos2unix )
 	$ADB shell su -c "$BB dd if=$partition of=/sdcard/backupTA.img"
 
 	echo
 	echo =======================================
 	echo  INTEGRITY CHECK
 	echo =======================================
-	backup_backupMD5=$( $ADB shell su -c "$BB md5sum /sdcard/backupTA.img | $BB awk {'print \$1'}" )
-	verify >/dev/null
+	backup_backupMD5=$( $ADB shell su -c "$BB md5sum /sdcard/backupTA.img | $BB awk {'print \\\$1'}" | _dos2unix )
+	#verify >/dev/null # XXX: Windows-specific, controls correct file writing
 	if [[ "$backup_currentPartitionMD5" != "$backup_backupMD5" ]]; then
 		echo FAILED - Backup does not match TA Partition. Please try again.
 		onBackupFailed
@@ -173,7 +173,7 @@ backupTA() {
 	if [[ $? -ne 0 ]]; then
 		return $backupFailed
 	fi
-	verify >/dev/null
+	#verify >/dev/null
 	if [[ "$backup_currentPartitionMD5" != "$backup_backupPulledMD5" ]]; then
 		echo FAILED - Backup has gone corrupted while pulling. Please try again.
 		onBackupFailed
@@ -194,7 +194,7 @@ backupTA() {
 	backup_timestamp=$( date +%Y%m%d.%H%M%S )
 	echo $backup_timestamp | _unix2dos > tmpbak/TA.timestamp
 	cd tmpbak
-	$ZIP a "../backup/TA-backup-${backup_timestamp}.zip" TA.img TA.md5 TA.blk TA.serial TA.timestamp TA.version
+	$ZIP "../backup/TA-backup-${backup_timestamp}.zip" TA.img TA.md5 TA.blk TA.serial TA.timestamp TA.version
 	if [[ $? -ne 0 ]]; then
 		onBackupFailed
 		return
