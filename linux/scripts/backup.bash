@@ -7,42 +7,42 @@ inspectPartition() {
 		return
 	fi
 	echo "--- $1 ---"
-	echo "Searching for Operator Identifier..."
+	echo -n "Searching for Operator Identifier..."
 	backup_matchOP_ID=$( $ADB shell su -c "$BB cat /dev/block/$1 | $BB grep -s -m 1 -c 'OP_ID='" | _dos2unix )
 	if [[ $backup_matchOP_ID == "1" ]]; then
 		echo "+"
 	else
 		echo "-" ;
 	fi
-	echo "Searching for Operator Name..."
+	echo -n "Searching for Operator Name..."
 	backup_matchOP_Name=$( $ADB shell su -c "$BB cat /dev/block/$1 | $BB grep -s -m 1 -c 'OP_NAME='" | _dos2unix )
 	if [[ "$backup_matchOP_Name" == "1" ]]; then
 		echo "+"
 	else
 		echo "-"
 	fi
-	echo "Searching for Rooting Status..."
+	echo -n "Searching for Rooting Status..."
 	backup_matchRootingStatus=$( $ADB shell su -c "$BB cat /dev/block/$1 | $BB grep -s -m 1 -c 'ROOTING_ALLOWED='" | _dos2unix )
 	if [[ "$backup_matchRootingStatus" == "1" ]]; then
 		echo "+"
 	else
 		echo "-"
 	fi
-	echo "Searching for S1 Boot..."
+	echo -n "Searching for S1 Boot..."
 	backup_matchS1_Boot=$( $ADB shell su -c "$BB cat /dev/block/$1 | $BB grep -s -m 1 -c -i 'S1_Boot'" | _dos2unix )
 	if [[ "$backup_matchS1_Boot" == "1" ]]; then
 		echo "+"
 	else
 		echo "-"
 	fi
-	echo "Searching for S1 Loader..."
+	echo -n "Searching for S1 Loader..."
 	backup_matchS1_Loader=$( $ADB shell su -c "$BB cat /dev/block/$1 | $BB grep -s -m 1 -c -i 'S1_Loader'" | _dos2unix )
 	if [[ "$backup_matchS1_Loader" == "1" ]]; then
 		echo "+"
 	else
 		echo "-"
 	fi
-	echo "Searching for S1 Hardware Configuration..."
+	echo -n "Searching for S1 Hardware Configuration..."
 	backup_matchS1_HWConf=$( $ADB shell su -c "$BB cat /dev/block/$1 | $BB grep -s -m 1 -c -i 'S1_HWConf'" | _dos2unix )
 	if [[ "$backup_matchS1_HWConf" == "1" ]]; then
 		echo "+"
