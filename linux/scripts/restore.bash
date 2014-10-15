@@ -46,138 +46,173 @@ restoreChoose() {
 	#for /f "tokens=*" %%D in ('dir/b/o backup\TA-Backup*.zip') do (
 
 	echo Please make your decision:
-	select opt in backup/TA-Backup*.zip Quit ; do
+	_PS3=$PS3
+	local numfiles=$( ls -l backup/TA-backup*.zip 2>/dev/null | wc -l )
+	PS3='['
+	for (( i=1; i<=$numfiles; ++i )); do
+		PS3+="$i,"
+	done
+	local numopts=
+	let 'numopts=numfiles+1'
+	PS3+="$numopts]"
+	cd backup
+	select opt in TA-backup*.zip Quit ; do
+		if [[ (!( "$REPLY" =~ ^[0-9]+$ )) || ( $REPLY -gt $numopts ) ]]; then
+			continue
+		fi
 		let restore_restoreIndex+=1
 		restore_restoreChosen=$REPLY
+		break
 	done
+	cd ..
+	PS3=$_PS3
 
 	if [[ "$opt" == "Quit" ]]; then
 		onRestoreCancelled
+		return 2
 	fi
 
-	cat <<TODO
-	# FIXME:
-	tools\find "[!restore_restoreChosen!]" < tmpbak\restore_list > tmpbak\restore_item
-	for /f "tokens=2" %%T in (tmpbak\restore_item) do (
-		set restore_restoreFile=%%T 
-	)
-	if "!restore_restoreFile!" == "" goto restoreChoose
+	restore_restoreFile=$opt # Filename
+
+	echo
+	echo "Are you sure you want to restore '$restore_restoreFile'?"
+	select opt in Yes No ; do
+		case $REPLY in
+			1) break ;;
+			2) onRestoreCancelled ; return 2 ;;
+			*) continue ;;
+		esac
+	done
 	 
-	echo.
-	%CHOICE% /c:yn %CHOICE_TEXT_PARAM% "Are you sure you want to restore '!restore_restoreFile!'?"
-	if "!errorlevel!" == "2" goto onRestoreCancelled
-	 
-	echo.
+	echo
 	echo =======================================
 	echo  EXTRACT BACKUP
 	echo =======================================
-	tools\zip.exe x -y backup\!restore_restoreFile! -otmpbak
-	if NOT "!errorlevel!" == "0" goto onRestoreFailed
-	if exist tmpbak\TA.blk (
-		set /p partition=<tmpbak\TA.blk
-	) else (
-		tools\adb.exe shell su -c "%BB% ls -l %PARTITION_BY_NAME% | %BB% awk '{print \$11}'">tmpbak\restore_defaultTA
-		set /p restore_defaultTA=<tmpbak\restore_defaultTA
-		tools\adb.exe shell su -c "if [ -b '!restore_defaultTA!' ]; then echo '1'; else echo '0'; fi">tmpbak\restore_defaultTAvalid
-		set /p restore_defaultTAvalid=<tmpbak\restore_defaultTAvalid
-		if "!restore_defaultTAvalid!" == "1" (
-			set partition=%PARTITION_BY_NAME%
-		) else (
-			set partition=/dev/block/mmcblk0p1
-		)
-	)
+	$UNZIP -o "backup/$restore_restoreFile" -d tmpbak
+	if [[ $? -ne 0 ]]; then
+		onRestoreFailed
+		return 3
+	fi
+	if [[ -f tmpbak/TA.blk ]]; then
+		partition=$( cat tmpbak/TA.blk | _dos2unix )
+	else
+		restore_defaultTA=$( $ADB shell su -c "$BB ls -l $PARTITION_BY_NAME | $BB awk '{print \\\$11}'" | _dos2unix )
+		restore_defaultTAvalid=$( $ADB shell su -c "if [ -b '$restore_defaultTA' ]; then echo '1'; else echo '0'; fi" | _dos2unix )
+		if [[ "$restore_defaultTAvalid" == "1" ]]; then
+			partition=$PARTITION_BY_NAME
+		else
+			partition=/dev/block/mmcblk0p1
+		fi
+	fi
 
-	echo.
+	echo
 	echo =======================================
 	echo  INTEGRITY CHECK
 	echo =======================================
-	set /p restore_savedBackupMD5=<tmpbak\TA.md5
-	verify > nul
-	call scripts\string-util.bat strlen restore_savedBackupMD5Len restore_savedBackupMD5
-	set /a restore_savedBackupMD5TrailingSpaces=!restore_savedBackupMD5Len!-32
-	for /f "tokens=* delims= " %%a in ("!restore_savedBackupMD5!") do set restore_savedBackupMD5=%%a
-	for /l %%a in (1,1,100) do if "!restore_savedBackupMD5:~-1!"==" " set restore_savedBackupMD5=!restore_savedBackupMD5:~0,-!restore_savedBackupMD5TrailingSpaces!
-	tools\md5.exe -l -n tmpbak\TA.img>tmpbak\restore_backupMD5
-	if NOT "!errorlevel!" == "0" goto onRestoreFailed
-	set /p restore_backupMD5=<tmpbak\restore_backupMD5
-	verify > nul
-	if NOT "!restore_savedBackupMD5!" == "!restore_backupMD5!" (
-		echo FAILED - Backup is corrupted.
-		goto onRestoreFailed
-	) else (
-		echo OK
-	)
+	restore_savedBackupMD5=$( cat tmpbak/TA.md5 | _dos2unix )
+	#verify > nul
+	restore_savedBackupMD5Len=$( echo -n "$restore_savedBackupMD5" | wc -c )
+	restore_savedBackupMD5=${restore_savedBackupMD5:0:32}
 
-	echo.
+	restore_backupMD5=$( md5sum tmpbak/TA.img | awk '{print $1}' )
+	if [[ $? -ne 0 ]]; then
+		onRestoreFailed
+		return 3
+	fi
+	#verify > nul
+	if [[ "$restore_savedBackupMD5" != "$restore_backupMD5" ]]; then
+		echo FAILED - Backup is corrupted.
+		onRestoreFailed
+		return 3
+	else
+		echo OK
+	fi
+
+	echo
 	echo =======================================
 	echo  COMPARE TA PARTITION WITH BACKUP
 	echo =======================================
-	tools\adb.exe shell su -c "%BB% md5sum !partition! | %BB% awk {'print \$1'}">tmpbak\restore_currentPartitionMD5
-	set /p restore_currentPartitionMD5=<tmpbak\restore_currentPartitionMD5
-	verify > nul
-	if "!restore_currentPartitionMD5!" == "!restore_savedBackupMD5!" (
+	restore_currentPartitionMD5=$( $ADB shell su -c "$BB md5sum $partition | $BB awk {'print \\\$1'}" | _dos2unix )
+	#verify > nul
+	if [[ "$restore_currentPartitionMD5" == "$restore_savedBackupMD5" ]]; then
 		echo TA partition already matches backup, no need to restore.
-		goto onRestoreCancelled
-	) else (
+		onRestoreCancelled
+		return 2
+	else
 		echo OK
-	)
+	fi
 
-	echo.
+	echo
 	echo =======================================
 	echo  BACKUP CURRENT TA PARTITION
 	echo =======================================
-	tools\adb.exe shell su -c "%BB% dd if=!partition! of=/sdcard/revertTA.img && %BB% sync && %BB% sync && %BB% sync && %BB% sync"
-	if NOT "!errorlevel!" == "0" goto onRestoreFailed
-	tools\adb.exe shell su -c "%BB% ls -l /sdcard/revertTA.img | %BB% awk {'print \$5'}">tmpbak\restore_revertTASize
-	set /p restore_revertTASize=<tmpbak\restore_revertTASize
-	verify > nul
+	$ADB shell su -c "$BB dd if=$partition of=/sdcard/revertTA.img && $BB sync && $BB sync && $BB sync && $BB sync"
+	if [[ $? -ne 0 ]]; then
+		onRestoreRevertFailed
+		return 4
+	fi
 
-	echo.
+	restore_revertTASize=$( $ADB shell su -c "$BB ls -l /sdcard/revertTA.img | $BB awk {'print \\\$5'}" | _dos2unix )
+	#verify > nul
+
+	echo
 	echo =======================================
 	echo  PUSH BACKUP TO SDCARD
 	echo =======================================
-	tools\adb.exe push tmpbak\TA.img sdcard/restoreTA.img
-	if NOT "!errorlevel!" == "0" goto onRestoreFailed
+	$ADB push tmpbak/TA.img sdcard/restoreTA.img
+	if [[ $? -ne 0 ]]; then
+		onRestoreFailed
+		return 3
+	fi
 
-	echo.
+	echo
 	echo =======================================
 	echo  INTEGRITY CHECK
 	echo =======================================
-	tools\adb.exe shell su -c "%BB% ls -l /sdcard/restoreTA.img | %BB% awk {'print \$5'}">tmpbak\restore_pushedBackupSize
-	tools\adb.exe shell su -c "%BB% md5sum /sdcard/restoreTA.img | %BB% awk {'print \$1'}">tmpbak\restore_pushedBackupMD5
-	if NOT "!errorlevel!" == "0" goto onRestoreFailed
-	set /p restore_pushedBackupSize=<tmpbak\restore_pushedBackupSize
-	set /p restore_pushedBackupMD5=<tmpbak\restore_pushedBackupMD5
-	verify > nul
-	if NOT "!restore_savedBackupMD5!" == "!restore_pushedBackupMD5!" (
+	restore_pushedBackupSize=$( $ADB shell su -c "$BB ls -l /sdcard/restoreTA.img | $BB awk {'print \\\$5'}" | _dos2unix )
+	restore_pushedBackupMD5=$( $ADB shell su -c "$BB md5sum /sdcard/restoreTA.img | $BB awk {'print \\\$1'}" | _dos2unix )
+	if [[ $? -ne 0 ]]; then
+		onRestoreFailed
+		return 3
+	fi
+	#verify > nul
+	if [[ "$restore_savedBackupMD5" != "$restore_pushedBackupMD5" ]]; then
 		echo FAILED - Backup has gone corrupted while pushing. Please try again.
-		goto onRestoreFailed
-	) else (
-		if NOT "!restore_revertTASize!" == "!restore_pushedBackupSize!" (
+		onRestoreFailed
+		return 3
+	else
+		if [[ "$restore_revertTASize" != "$restore_pushedBackupSize" ]]; then
 			echo FAILED - Backup and TA partition sizes do not match.
-			goto onRestoreFailed
-		) else (
+			onRestoreFailed
+			return 3
+		else
 			echo OK
-		)
-	)
+		fi
+	fi
 
-	echo.
+	echo
 	echo =======================================
 	echo  SERIAL CHECK
 	echo =======================================
-	if NOT exist tmpbak\TA.serial (
-		tools\adb.exe shell su -c "%BB% cat /sdcard/restoreTA.img | %BB% grep -m 1 -o !restore_serialno!">tmpbak\restore_backupSerial
-		if NOT "!errorlevel!" == "0" goto unknownDevice
-		copy tmpbak\restore_backupSerial tmpbak\TA.serial > nul 2>&1
-	)
-	set /p restore_backupSerial=<tmpbak\TA.serial
-	verify > nul
-	if NOT "!restore_serialno!" == "!restore_backupSerial!" (
-		goto otherDevice
-	)
+	if [[ ! -f tmpbak/TA.serial ]]; then
+		restore_backupSerial=$( $ADB shell su -c "$BB cat /sdcard/restoreTA.img | $BB grep -m 1 -o $restore_serialno" )
+		if [[ $? -ne 0 ]]; then
+			if ! unknownDevice ; then
+				restore_backupSerial=
+				return 2
+			fi
+		fi
+		restore_backupSerial=$( echo "$restore_backupSerial" | _dos2unix )
+		echo $restore_backupSerial | _unix2dos > tmpbak/TA.serial
+	fi
+	#verify > nul
+	if [[ "$restore_serialno" != "$restore_backupSerial" ]]; then
+		if ! otherDevice ; then
+			return 2
+		fi
+	fi
 	echo OK
-	goto validDevice
-TODO
+	validDevice
 }
 
 otherDevice() {
@@ -193,6 +228,7 @@ unknownDevice() {
 invalidConfirmation() {
 	if ! hardbrickConfirmation ; then
 		onRestoreCancelled
+		return 2
 	else
 		validDevice
 	fi
@@ -309,10 +345,10 @@ exit_restore() {
 	dispose_restore $1
 	echo
 	if [[ "$1" == "1" ]]; then
-		echo *** Restore successful. ***
-		echo *** You must restart the device for the restore to take effect. ***
+		echo '*** Restore successful. ***'
+		echo '*** You must restart the device for the restore to take effect. ***'
 		echo
-		%CHOICE% /c:yn %CHOICE_TEXT_PARAM% "Do you want to restart the device?"
+		echo "Do you want to restart the device?"
 		select opt in Yes No ; do
 			case $REPLY in
 				1) break ;;
@@ -323,13 +359,13 @@ exit_restore() {
 		$ADB reboot
 	fi
 	case "$1" in
-		"2") echo *** Restore cancelled. *** ;;
-		"3") echo *** Restore unsuccessful. *** ;;
+		"2") echo '*** Restore cancelled. ***' ;;
+		"3") echo '*** Restore unsuccessful. ***' ;;
 		"4")
-			echo *** DO NOT SHUTDOWN OR RESTART THE DEVICE!!! ***
-			echo *** Reverting restore has failed! Contact DevShaft @XDA-forums for guidance. ***
+			echo '*** DO NOT SHUTDOWN OR RESTART THE DEVICE!!! ***'
+			echo '*** Reverting restore has failed! Contact DevShaft @XDA-forums for guidance. ***'
 			;;
-		"5") echo *** Revert successful. Try to restore again. *** ;;
+		"5") echo '*** Revert successful. Try to restore again. ***' ;;
 	esac
 	echo
 	_pause
