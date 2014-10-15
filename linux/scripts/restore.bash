@@ -55,7 +55,7 @@ restoreChoose() {
 	local numopts=
 	let 'numopts=numfiles+1'
 	PS3+="$numopts]"
-	cd backup
+	pushd backup >/dev/null
 	select opt in TA-backup*.zip Quit ; do
 		if [[ (!( "$REPLY" =~ ^[0-9]+$ )) || ( $REPLY -gt $numopts ) ]]; then
 			continue
@@ -64,7 +64,7 @@ restoreChoose() {
 		restore_restoreChosen=$REPLY
 		break
 	done
-	cd ..
+	popd >/dev/null
 	PS3=$_PS3
 
 	if [[ "$opt" == "Quit" ]]; then

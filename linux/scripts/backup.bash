@@ -185,8 +185,9 @@ backupTA() {
 	backup_timestamp=$( date +%Y%m%d.%H%M%S )
 	# In Windows this file is terminated with 0x0D 0x0D 0x0A (CR CR LF)
 	echo $backup_timestamp | _unix2dos | sed -e 's/\r/\r\r/' > tmpbak/TA.timestamp
-	cd tmpbak
+	pushd tmpbak >/dev/null
 	$ZIP "../backup/TA-backup-${backup_timestamp}.zip" TA.img TA.md5 TA.blk TA.serial TA.timestamp TA.version
+	popd >/dev/null
 	if [[ $? -ne 0 ]]; then
 		onBackupFailed
 		return
