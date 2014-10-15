@@ -177,13 +177,14 @@ backupTA() {
 	echo =======================================
 	echo  PACKAGE BACKUP
 	echo =======================================
-	$ADB get-serialno > tmpbak/TA.serial
+	$ADB get-serialno | _unix2dos > tmpbak/TA.serial
 	echo $partition | _unix2dos > tmpbak/TA.blk
 	echo $backup_backupPulledMD5 | _unix2dos > tmpbak/TA.md5
 	echo $VERSION | _unix2dos > tmpbak/TA.version
 	#$ADB shell su -c "$BB date +%%Y%%m%%d.%%H%%M%%S">tmpbak\TA.timestamp
 	backup_timestamp=$( date +%Y%m%d.%H%M%S )
-	echo $backup_timestamp | _unix2dos > tmpbak/TA.timestamp
+	# In Windows this file is terminated with 0x0D 0x0D 0x0A (CR CR LF)
+	echo $backup_timestamp | _unix2dos | sed -e 's/\r/\r\r/' > tmpbak/TA.timestamp
 	cd tmpbak
 	$ZIP "../backup/TA-backup-${backup_timestamp}.zip" TA.img TA.md5 TA.blk TA.serial TA.timestamp TA.version
 	if [[ $? -ne 0 ]]; then
