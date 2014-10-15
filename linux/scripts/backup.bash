@@ -213,7 +213,7 @@ onBackupFailed() {
 ## EXIT BACKUP
 #####################
 exitBackup() {
-	backup_dispose $1
+	dispose_backup $1
 	echo
 	case "$1" in
 		1) echo "*** Backup successful. ***" ;;
@@ -227,7 +227,7 @@ exitBackup() {
 #####################
 ## DISPOSE BACKUP
 #####################
-backup_dispose() {
+dispose_backup() {
 	set backup_currentPartitionMD5=
 	set backup_backupMD5=
 	set backup_backupPulledMD5=

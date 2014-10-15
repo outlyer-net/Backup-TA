@@ -20,7 +20,7 @@ removeBusyBox() {
 	echo OK
 }
 
-busybox_dispose() {
+dispose_busybox() {
 	removeBusyBox
 }
 

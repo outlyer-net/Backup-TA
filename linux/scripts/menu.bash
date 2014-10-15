@@ -141,7 +141,7 @@ _do_convert_ta_img() {
 	showMenu
 }
 
-menu_dispose() {
+dispose_menu() {
 	# Nothing to do
 	true
 }
