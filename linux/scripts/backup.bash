@@ -213,7 +213,7 @@ onBackupFailed() {
 ## EXIT BACKUP
 #####################
 exitBackup() {
-	dispose $1
+	backup_dispose $1
 	echo
 	case "$1" in
 		1) echo "*** Backup successful. ***" ;;
