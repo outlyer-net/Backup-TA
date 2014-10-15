@@ -1,12 +1,15 @@
 #!/bin/bash
 declare -r VERSION=9.11
 
-# TODO: Use bundled adb
-#ADB=./linux/tools/adb
-ADB="adb"
+BASEDIR="$(dirname "$0")"
+ADB="$BASEDIR/linux/tools/adb.x86"
+#ADB="adb" # Uncomment to use system's ADB
 ZIP=zip
-SCRIPTS=./linux/scripts
-TOOLS=./tools
+UNZIP=unzip
+SCRIPTS="$BASEDIR/linux/scripts"
+TOOLS="$BASEDIR/tools"
+
+## TODO: Checks for exit codes after pipes aren't meaningful
 
 ##############################################
 ## Function-replacements (labels in Batch)
@@ -62,16 +65,16 @@ dispose() {
 	local choiceTextParam=
 	local choice=
 
-	menu_dispose
-	backup_dispose
-	restore_dispose
-	convert_dispose
+	dispose_menu
+	dispose_backup
+	dispose_restore
+	dispose_convert
 
 	if [[ -d tmpbak ]]; then
 		rm -rf tmpbak
 	fi
 
-	busybox_dispose
+	dispose_busybox
 
 	echo "Killing ADB Daemon..."
 	$ADB kill-server >/dev/null 2>&1
@@ -96,19 +99,24 @@ wakeDevice() {
 
 export ADB SCRIPTS TOOLS VERSION
 
+source "$SCRIPTS/license.bash"
 source "$SCRIPTS/busybox.bash"
 source "$SCRIPTS/root.bash"
 source "$SCRIPTS/menu.bash"
 source "$SCRIPTS/backup.bash"
+source "$SCRIPTS/restore.bash"
+source "$SCRIPTS/convert.bash"
 
 cd "$(dirname "$0")"
 if [[ ! -d tmpbak ]]; then
 	mkdir tmpbak
 fi
-#./scripts/license.bash showLicense
+showLicense
 initialize
 wakeDevice
-pushBusyBox # busybox.bash
+pushBusyBox
+# pushBusyBox temporary replacement
+#export BB=/data/local/tmp/busybox-backup-ta
 if ! check_hasRoot ; then # root.bash
 	exit 1
 fi
