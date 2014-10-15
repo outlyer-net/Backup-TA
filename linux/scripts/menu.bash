@@ -23,6 +23,7 @@ showMenu() {
 	select opt in "${choices[@]}" ; do
 		let menu_Depth+=1
 		PS3="#[1,2]? "
+		# FIXME: Quit after menu option (add breaks) or not (as is)
 		case $REPLY in
 			1) _do_backup ;;
 			2) _do_restore ;;
@@ -52,9 +53,9 @@ _do_backup() {
 	select opt in Yes No ; do
 		case $REPLY in
 			1) # Yes
-				backupTA ;;
+				backupTA ; break ;;
 			2) # No
-				;;
+				break ;;
 			*) continue ;;
 		esac
 		break
@@ -80,9 +81,9 @@ _do_restore() {
 	select opt in Yes No ; do
 		case $REPLY in
 			1) # Yes
-				restoreTA ;;
+				restoreTA ; break ;;
 			2) # No
-				;;
+				break ;;
 			*) continue ;;
 		esac
 		break
@@ -106,9 +107,9 @@ _do_dry_run() {
 	select opt in Yes No ; do
 		case $REPLY in
 			1) # Yes
-				restoreTAdry ;;
+				restoreTAdry ; break ;;
 			2) # No
-				;;
+				break ;;
 			*) continue ;;
 		esac
 		break
@@ -130,9 +131,9 @@ _do_convert_ta_img() {
 	select opt in Yes No ; do
 		case $REPLY in
 			1) # Yes
-				convertRawTA ;;
+				convertRawTA ; break ;;
 			2) # No
-				;;
+				break ;;
 			*) continue ;;
 		esac
 		break
