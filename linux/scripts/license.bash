@@ -7,7 +7,7 @@ showLicense() {
 	echo
 	cat <<EOF
  [ ------------------------------------------------------------ ]
- [  Backup TA v%VERSION% for Sony Xperia              MIT License    ]
+ [  Backup TA v$VERSION for Sony Xperia              MIT License    ]
  [ ------------------------------------------------------------ ]
  [  Copyright (C) 2013 DevShaft                                 ]
  [   Unofficial Linux port (C) 2014 outlyer                     ]
