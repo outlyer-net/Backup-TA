@@ -8,3 +8,5 @@ for more information.
 
 More work is needed, but so far it should work with no problems to backup (restore needs a lot
 more testing). If possible, use the Windows version to be on the safe side.
+
+THESE ARE EXPERIMENTAL SCRIPTS, DON'T LOOK AT ME IF YOUR PHONE BREAKS
